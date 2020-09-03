@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>split-gpx</title>
+</head>
+<body>
+<input type="file" id="file" name="files"/>
+<ul>
+
+</ul>
+
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+        crossorigin="anonymous"></script>
+<script type="text/javascript">
+    (function ($) {
+        var template = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+            '<gpx xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gpxdata="http://www.cluetrust.com/XML/GPXDATA/1/0" xmlns="http://www.topografix.com/GPX/1/0" xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd http://www.cluetrust.com/XML/GPXDATA/1/0 http://www.cluetrust.com/Schemas/gpxdata10.xsd" version="1.0" creator="split-gpx">\n' +
+            '</gpx>';
+
+
+        $('#file').change(function (e) {
+            e.preventDefault();
+            var file = e.target.files[0];
+            var reader = new FileReader();
+            reader.addEventListener('load', onLoad, false);
+            reader.readAsText(file);
+        });
+
+        function onLoad(e) {
+            'use strict';
+            var xml = e.target.result;
+            var parser = new DOMParser();
+            parse(parser.parseFromString(xml, 'text/xml'));
+        }
+
+        function parse(dom) {
+            var waypoints = dom.getElementsByTagName('wpt');
+            var routeName = dom.querySelectorAll('trk > name')[0].textContent;
+            var trakpoints = dom.querySelectorAll('trk > trkseg > trkpt');
+
+            var split = [];
+            var array;
+
+            for (var i = 0; i < trakpoints.length; i++) {
+                if (i % 10000 === 0) {
+                    array = [];
+                    split.push(array);
+                }
+                array.push(trakpoints[i]);
+            }
+
+            for (var i = 0; i < split.length; i++) {
+                var doc = newXml();
+                var gpx = doc.lastChild;
+
+                if (i === 0) {
+                    for (var j = 0; j < waypoints.length; j++) {
+                        var newChild = doc.importNode(waypoints[j], true);
+                        gpx.appendChild(newChild);
+                    }
+                }
+
+                var trk = doc.createElement('trk');
+                gpx.appendChild(trk);
+                var name = doc.createElement('name');
+                name.appendChild(doc.createTextNode(routeName + '-' + i));
+                trk.appendChild(name);
+                var trkseg = doc.createElement('trkseg');
+                trk.appendChild(trkseg);
+
+                split[i].forEach(function (n) {
+                    trkseg.appendChild(doc.importNode(n, true));
+                });
+
+                handleDownload(i, doc);
+            }
+        }
+
+        function newXml() {
+            var parser = new DOMParser();
+            return parser.parseFromString(template, 'text/xml');
+        }
+
+        function handleDownload(i, doc) {
+            var serializer = new XMLSerializer();
+            var content = serializer.serializeToString(doc);
+            var blob = new Blob([content], {"type": "text/xml"});
+
+            var download = $('<li><a id="download' + i + '" href="#" download="route' + i + '.gpx">download</a></li>');
+            $('ul').append(download);
+            document.getElementById('download' + i).href = window.URL.createObjectURL(blob);
+        }
+
+    })(jQuery);
+</script>
+</body>
+</html>
