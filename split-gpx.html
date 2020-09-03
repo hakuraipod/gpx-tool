@@ -88,7 +88,7 @@
             var content = serializer.serializeToString(doc);
             var blob = new Blob([content], {"type": "text/xml"});
 
-            var download = $('<li><a id="download' + i + '" href="#" download="route' + i + '.gpx">download</a></li>');
+            var download = $('<li><a id="download' + i + '" href="#" download="route' + i + '.gpx">route' + i + '.gpx</a></li>');
             $('ul').append(download);
             document.getElementById('download' + i).href = window.URL.createObjectURL(blob);
         }
